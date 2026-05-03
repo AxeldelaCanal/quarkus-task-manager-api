@@ -25,6 +25,9 @@ public class Task {
     @Column(nullable = false)
     private TaskStatus status = TaskStatus.PENDING;
 
+    @Column(nullable = false)
+    private Long userId;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -88,5 +91,13 @@ public class Task {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }

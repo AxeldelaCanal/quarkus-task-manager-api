@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class TaskResponse {
 
     public Long id;
+    public Long userId;
     public String title;
     public String description;
     public TaskStatus status;
@@ -23,6 +24,7 @@ public class TaskResponse {
     public static TaskResponse from(Task task) {
         TaskResponse response = new TaskResponse();
         response.id = task.getId();
+        response.userId = task.getUserId();
         response.title = task.getTitle();
         response.description = task.getDescription();
         response.status = task.getStatus();

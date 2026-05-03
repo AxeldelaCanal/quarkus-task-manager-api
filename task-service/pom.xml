@@ -26,6 +26,12 @@
       <artifactId>quarkus-rest-jackson</artifactId>
     </dependency>
 
+    <!-- REST Client (MicroProfile) -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-rest-client-jackson</artifactId>
+    </dependency>
+
     <!-- ORM + Panache (Repository pattern) -->
     <dependency>
       <groupId>io.quarkus</groupId>

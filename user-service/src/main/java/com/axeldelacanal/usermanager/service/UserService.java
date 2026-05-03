@@ -19,4 +19,15 @@ public class UserService {
     public boolean isHealthy() {
         return userRepository != null;
     }
+
+    /**
+     * Indica si existe un usuario con el ID dado.
+     * Usado por task-service para validar el propietario de una tarea antes de crearla.
+     *
+     * @param id identificador del usuario
+     * @return true si el usuario existe, false en caso contrario
+     */
+    public boolean existsById(Long id) {
+        return userRepository.findByIdOptional(id).isPresent();
+    }
 }
