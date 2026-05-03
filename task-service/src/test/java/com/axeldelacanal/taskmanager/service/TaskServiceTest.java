@@ -3,11 +3,14 @@ package com.axeldelacanal.taskmanager.service;
 import com.axeldelacanal.taskmanager.client.UserServiceClient;
 import com.axeldelacanal.taskmanager.domain.Task;
 import com.axeldelacanal.taskmanager.domain.TaskStatus;
+import com.axeldelacanal.taskmanager.dto.PageResponse;
 import com.axeldelacanal.taskmanager.dto.TaskRequest;
 import com.axeldelacanal.taskmanager.dto.TaskResponse;
 import com.axeldelacanal.taskmanager.exception.TaskNotFoundException;
 import com.axeldelacanal.taskmanager.exception.UserNotFoundException;
+import com.axeldelacanal.taskmanager.exception.UserServiceUnavailableException;
 import com.axeldelacanal.taskmanager.repository.TaskRepository;
+import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +26,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -59,29 +61,32 @@ class TaskServiceTest {
     // =========================================================================
 
     @Test
-    @DisplayName("findAll without filter returns all tasks from repository")
+    @DisplayName("findAll without filter returns paginated tasks from repository")
     void findAll_noFilter_returnsAllTasks() {
-        when(taskRepository.listAll()).thenReturn(List.of(sampleTask));
+        when(taskRepository.findAllPaged(0, 20)).thenReturn(List.of(sampleTask));
+        when(taskRepository.count()).thenReturn(1L);
 
-        List<TaskResponse> result = taskService.findAll(null);
+        PageResponse<TaskResponse> result = taskService.findAll(null, 0, 20);
 
-        assertEquals(1, result.size());
-        assertEquals("Fix login bug", result.get(0).title);
-        verify(taskRepository).listAll();
-        verifyNoMoreInteractions(taskRepository);
+        assertEquals(1, result.content.size());
+        assertEquals("Fix login bug", result.content.get(0).title);
+        assertEquals(1L, result.total);
+        verify(taskRepository).findAllPaged(0, 20);
+        verify(taskRepository, never()).findByStatusPaged(any(), anyInt(), anyInt());
     }
 
     @Test
-    @DisplayName("findAll with status filter delegates to findByStatus")
+    @DisplayName("findAll with status filter delegates to findByStatusPaged")
     void findAll_withStatusFilter_delegatesToRepository() {
-        when(taskRepository.findByStatus(TaskStatus.IN_PROGRESS)).thenReturn(List.of(sampleTask));
+        when(taskRepository.findByStatusPaged(TaskStatus.IN_PROGRESS, 0, 20)).thenReturn(List.of(sampleTask));
+        when(taskRepository.countByStatus(TaskStatus.IN_PROGRESS)).thenReturn(1L);
 
-        List<TaskResponse> result = taskService.findAll(TaskStatus.IN_PROGRESS);
+        PageResponse<TaskResponse> result = taskService.findAll(TaskStatus.IN_PROGRESS, 0, 20);
 
-        assertEquals(1, result.size());
-        assertEquals(TaskStatus.IN_PROGRESS, result.get(0).status);
-        verify(taskRepository).findByStatus(TaskStatus.IN_PROGRESS);
-        verify(taskRepository, never()).listAll();
+        assertEquals(1, result.content.size());
+        assertEquals(TaskStatus.IN_PROGRESS, result.content.get(0).status);
+        verify(taskRepository).findByStatusPaged(TaskStatus.IN_PROGRESS, 0, 20);
+        verify(taskRepository, never()).findAllPaged(anyInt(), anyInt());
     }
 
     // =========================================================================
@@ -173,6 +178,34 @@ class TaskServiceTest {
         );
 
         assertTrue(ex.getMessage().contains(String.valueOf(MISSING_USER_ID)));
+        verify(taskRepository, never()).persist(any(Task.class));
+    }
+
+    @Test
+    @DisplayName("create throws UserServiceUnavailableException when user-service returns 5xx")
+    void create_userServiceReturns500_throwsUnavailableException() {
+        TaskRequest request = new TaskRequest();
+        request.userId = EXISTING_USER_ID;
+        request.title = "Task during outage";
+
+        when(userServiceClient.findById(EXISTING_USER_ID))
+                .thenReturn(Response.serverError().build());
+
+        assertThrows(UserServiceUnavailableException.class, () -> taskService.create(request));
+        verify(taskRepository, never()).persist(any(Task.class));
+    }
+
+    @Test
+    @DisplayName("create throws UserServiceUnavailableException when user-service is unreachable")
+    void create_userServiceUnreachable_throwsUnavailableException() {
+        TaskRequest request = new TaskRequest();
+        request.userId = EXISTING_USER_ID;
+        request.title = "Task while service is down";
+
+        when(userServiceClient.findById(EXISTING_USER_ID))
+                .thenThrow(new ProcessingException("Connection refused"));
+
+        assertThrows(UserServiceUnavailableException.class, () -> taskService.create(request));
         verify(taskRepository, never()).persist(any(Task.class));
     }
 

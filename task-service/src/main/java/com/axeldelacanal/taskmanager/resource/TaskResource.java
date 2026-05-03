@@ -2,6 +2,7 @@ package com.axeldelacanal.taskmanager.resource;
 
 import com.axeldelacanal.taskmanager.domain.TaskStatus;
 import com.axeldelacanal.taskmanager.dto.HealthResponse;
+import com.axeldelacanal.taskmanager.dto.PageResponse;
 import com.axeldelacanal.taskmanager.dto.TaskRequest;
 import com.axeldelacanal.taskmanager.dto.TaskResponse;
 import com.axeldelacanal.taskmanager.service.TaskService;
@@ -18,7 +19,6 @@ import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-import java.util.List;
 
 /**
  * JAX-RS resource exposing the Task Manager REST API.
@@ -43,14 +43,19 @@ public class TaskResource {
     }
 
     @GET
-    @Operation(summary = "List all tasks", description = "Returns all tasks, optionally filtered by status")
-    @APIResponse(responseCode = "200", description = "List of tasks",
+    @Operation(summary = "List all tasks", description = "Returns a paginated list of tasks, optionally filtered by status")
+    @APIResponse(responseCode = "200", description = "Paginated list of tasks",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
-                    schema = @Schema(implementation = TaskResponse.class)))
-    public List<TaskResponse> getAll(
+                    schema = @Schema(implementation = PageResponse.class)))
+    public PageResponse<TaskResponse> getAll(
             @Parameter(description = "Filter by task status: PENDING, IN_PROGRESS, DONE")
-            @QueryParam("status") TaskStatus status) {
-        return taskService.findAll(status);
+            @QueryParam("status") TaskStatus status,
+            @Parameter(description = "Zero-based page index (default 0)")
+            @QueryParam("page") @DefaultValue("0") int page,
+            @Parameter(description = "Page size (default 20, max 100)")
+            @QueryParam("size") @DefaultValue("20") int size) {
+        int clampedSize = Math.min(size, 100);
+        return taskService.findAll(status, page, clampedSize);
     }
 
     @GET

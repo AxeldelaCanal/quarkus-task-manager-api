@@ -3,6 +3,7 @@ package com.axeldelacanal.taskmanager.service;
 import com.axeldelacanal.taskmanager.client.UserServiceClient;
 import com.axeldelacanal.taskmanager.domain.Task;
 import com.axeldelacanal.taskmanager.domain.TaskStatus;
+import com.axeldelacanal.taskmanager.dto.PageResponse;
 import com.axeldelacanal.taskmanager.dto.TaskRequest;
 import com.axeldelacanal.taskmanager.dto.TaskResponse;
 import com.axeldelacanal.taskmanager.exception.TaskNotFoundException;
@@ -18,7 +19,6 @@ import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class TaskService {
@@ -32,11 +32,18 @@ public class TaskService {
     @RestClient
     UserServiceClient userServiceClient;
 
-    public List<TaskResponse> findAll(TaskStatus status) {
-        List<Task> tasks = (status != null)
-                ? taskRepository.findByStatus(status)
-                : taskRepository.listAll();
-        return tasks.stream().map(TaskResponse::from).collect(Collectors.toList());
+    public PageResponse<TaskResponse> findAll(TaskStatus status, int page, int size) {
+        List<Task> tasks;
+        long total;
+        if (status != null) {
+            tasks = taskRepository.findByStatusPaged(status, page, size);
+            total = taskRepository.countByStatus(status);
+        } else {
+            tasks = taskRepository.findAllPaged(page, size);
+            total = taskRepository.count();
+        }
+        List<TaskResponse> content = tasks.stream().map(TaskResponse::from).toList();
+        return PageResponse.of(content, page, size, total);
     }
 
     public TaskResponse findById(Long id) {
@@ -66,7 +73,9 @@ public class TaskService {
                 .orElseThrow(() -> new TaskNotFoundException(id));
 
         task.setTitle(request.title);
-        task.setDescription(request.description);
+        if (request.description != null) {
+            task.setDescription(request.description);
+        }
         if (request.status != null) {
             task.setStatus(request.status);
         }

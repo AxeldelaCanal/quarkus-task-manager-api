@@ -8,18 +8,18 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import java.util.List;
 
-/**
- * Panache repository for {@link Task} entities.
- * Inherits full CRUD from {@link PanacheRepository} and adds status-based filtering.
- */
 @ApplicationScoped
 public class TaskRepository implements PanacheRepository<Task> {
 
-    /**
-     * Returns all tasks matching the given status, ordered by creation date descending.
-     * Uses Panache's Sort API instead of inline JPQL to keep queries composable.
-     */
-    public List<Task> findByStatus(TaskStatus status) {
-        return list("status", Sort.by("createdAt").descending(), status);
+    public List<Task> findAllPaged(int page, int size) {
+        return findAll(Sort.by("createdAt").descending()).page(page, size).list();
+    }
+
+    public List<Task> findByStatusPaged(TaskStatus status, int page, int size) {
+        return find("status", Sort.by("createdAt").descending(), status).page(page, size).list();
+    }
+
+    public long countByStatus(TaskStatus status) {
+        return count("status", status);
     }
 }
