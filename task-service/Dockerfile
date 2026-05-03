@@ -1,13 +1,11 @@
-# NOTE: This root Dockerfile builds task-service only (kept as a standalone
-# fallback). For multi-service orchestration use docker-compose.yml, which
-# references task-service/Dockerfile and user-service/Dockerfile respectively.
-
 # ─── Stage 1: Build ───────────────────────────────────────────────────────────
 FROM maven:3.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
-# Cache dependency resolution separately from source compilation
+# Cache dependency resolution separately from source compilation.
+# Both the parent pom and the module pom are needed because this is a
+# multi-module Maven project — the parent pom defines dependency management.
 COPY pom.xml .
 COPY task-service/pom.xml task-service/
 COPY user-service/pom.xml user-service/
@@ -21,11 +19,11 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-# Quarkus fast-jar layout (artifact built inside task-service module)
-COPY --from=build /app/task-service/target/quarkus-app/lib/           ./lib/
-COPY --from=build /app/task-service/target/quarkus-app/*.jar          ./
-COPY --from=build /app/task-service/target/quarkus-app/app/           ./app/
-COPY --from=build /app/task-service/target/quarkus-app/quarkus/       ./quarkus/
+# Quarkus fast-jar layout produced by quarkus-maven-plugin
+COPY --from=build /app/task-service/target/quarkus-app/lib/     ./lib/
+COPY --from=build /app/task-service/target/quarkus-app/*.jar    ./
+COPY --from=build /app/task-service/target/quarkus-app/app/     ./app/
+COPY --from=build /app/task-service/target/quarkus-app/quarkus/ ./quarkus/
 
 EXPOSE 8080
 ENV JAVA_OPTS="-Dquarkus.http.host=0.0.0.0"

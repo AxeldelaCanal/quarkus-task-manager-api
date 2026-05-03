@@ -8,55 +8,57 @@
 
 ### Descripción
 
-API REST para gestión de tareas construida con **Quarkus 3.10** y Java 17. Implementa arquitectura en capas (Resource → Service → Repository), validaciones con Bean Validation, manejo global de excepciones y documentación automática con Swagger UI.
+API REST multi-módulo para gestión de tareas construida con **Quarkus 3.24** y Java 17. Implementa una arquitectura de microservicios, comunicación inter-servicios vía MicroProfile REST Client, acceso a datos con Hibernate ORM + Panache, y orquestación local con Docker Compose.
+
+### Arquitectura
+
+El sistema está compuesto por dos microservicios independientes, cada uno con su propia base de datos, comunicándose vía peticiones HTTP:
+
+```text
++-----------------------+   Verifica   +-----------------------+
+|     task-service      | ------------>|     user-service      |
+|     (Puerto 8080)     |  usuario OK  |     (Puerto 8081)     |
++-----------------------+     REST     +-----------------------+
+           |                                  |
+           v                                  v
++-----------------------+          +-----------------------+
+|    postgres-tasks     |          |    postgres-users     |
+|     (Puerto 5432)     |          |     (Puerto 5433)     |
++-----------------------+          +-----------------------+
+```
 
 ### Stack Tecnológico
 
 | Tecnología | Versión | Rol |
 |---|---|---|
-| Quarkus | 3.10.0 | Framework backend |
+| Quarkus | 3.24.1 | Framework backend |
 | Java | 17 | Lenguaje |
-| RESTEasy Reactive | — | Capa REST (JAX-RS) |
+| Quarkus REST | — | Capa REST (JAX-RS) |
+| MicroProfile REST Client | — | Comunicación inter-servicios |
 | Hibernate ORM + Panache | — | ORM / acceso a datos |
 | PostgreSQL | 16 | Base de datos |
 | SmallRye OpenAPI | — | Documentación Swagger |
 | JUnit 5 + Mockito | 5.x | Testing |
-| Docker | — | Containerización |
+| Docker & Compose | — | Containerización |
 
 ### Cómo correr localmente
 
-#### Opción 1 — Con Docker Compose (recomendado)
+#### Orquestación completa con Docker Compose (recomendado)
+
+Levanta ambos microservicios y sus respectivas bases de datos (4 contenedores):
 
 ```bash
 docker-compose up --build
 ```
 
-La API queda disponible en `http://localhost:8080`
-Swagger UI en `http://localhost:8080/q/swagger-ui`
-
-#### Opción 2 — Dev mode (requiere PostgreSQL local)
-
-1. Levantá solo la base de datos:
-```bash
-docker-compose up postgres
-```
-
-2. Corré la app en modo dev (hot reload):
-```bash
-./mvnw quarkus:dev
-```
-
-#### Variables de entorno (producción)
-
-| Variable | Descripción |
-|---|---|
-| `DB_URL` | JDBC URL de la base de datos |
-| `DB_USERNAME` | Usuario de PostgreSQL |
-| `DB_PASSWORD` | Contraseña de PostgreSQL |
+- **Task Service API:** `http://localhost:8080`
+- **User Service API:** `http://localhost:8081`
+- **Swagger UI (Tasks):** `http://localhost:8080/q/swagger-ui`
+- **Swagger UI (Users):** `http://localhost:8081/q/swagger-ui`
 
 ### Endpoints
 
-#### Tasks
+#### Task Service (Puerto 8080)
 
 | Método | Ruta | Descripción | Código exitoso |
 |---|---|---|---|
@@ -66,6 +68,13 @@ docker-compose up postgres
 | `POST` | `/tasks` | Crear nueva tarea | `201 Created` |
 | `PUT` | `/tasks/{id}` | Actualizar tarea | `200 OK` |
 | `DELETE` | `/tasks/{id}` | Eliminar tarea | `204 No Content` |
+
+#### User Service (Puerto 8081)
+
+| Método | Ruta | Descripción | Código exitoso |
+|---|---|---|---|
+| `GET` | `/users/health` | Health check del servicio | `200 OK` |
+| `GET` | `/users/{id}` | Verificar si existe un usuario | `200 OK` / `404 Not Found` |
 
 #### Estados disponibles
 
@@ -79,14 +88,14 @@ docker-compose up postgres
 ```bash
 curl -X POST http://localhost:8080/tasks \
   -H "Content-Type: application/json" \
-  -d '{"title": "Setup CI/CD", "description": "Configure GitHub Actions pipeline", "status": "PENDING"}'
+  -d '{"userId": 1, "title": "Setup CI/CD", "description": "Configure GitHub Actions pipeline", "status": "PENDING"}'
 ```
 
 **Actualizar estado:**
 ```bash
 curl -X PUT http://localhost:8080/tasks/1 \
   -H "Content-Type: application/json" \
-  -d '{"title": "Setup CI/CD", "status": "DONE"}'
+  -d '{"userId": 1, "title": "Setup CI/CD", "status": "DONE"}'
 ```
 
 **Filtrar por estado:**
@@ -98,8 +107,8 @@ curl http://localhost:8080/tasks?status=IN_PROGRESS
 
 | Código | Situación |
 |---|---|
-| `400 Bad Request` | Validación fallida (título vacío, campo inválido) |
-| `404 Not Found` | Tarea no encontrada por ID |
+| `400 Bad Request` | Validación fallida (título vacío, usuario faltante) |
+| `404 Not Found` | Tarea o usuario no encontrado por ID |
 | `500 Internal Server Error` | Error inesperado del servidor |
 
 ### Tests
@@ -108,7 +117,7 @@ curl http://localhost:8080/tasks?status=IN_PROGRESS
 ./mvnw test
 ```
 
-9 tests unitarios sobre la capa de servicio — sin base de datos, usando Mockito puro.
+11 tests unitarios sobre la capa de servicio — sin base de datos, usando Mockito puro y verificando interacciones con el REST Client.
 
 ---
 
@@ -116,53 +125,57 @@ curl http://localhost:8080/tasks?status=IN_PROGRESS
 
 ### Description
 
-A REST API for task management built with **Quarkus 3.10** and Java 17. Implements a layered architecture (Resource → Service → Repository), Bean Validation, global exception handling, and automatic Swagger UI documentation.
+A multi-module REST API for task management built with **Quarkus 3.24** and Java 17. Implements a microservices architecture, inter-service communication via MicroProfile REST Client, data access with Hibernate ORM + Panache, and local orchestration with Docker Compose.
+
+### Architecture
+
+The system consists of two independent microservices, each with its own database, communicating via HTTP requests:
+
+```text
++-----------------------+    Verifies  +-----------------------+
+|     task-service      | ------------>|     user-service      |
+|     (Port 8080)       |   user OK    |     (Port 8081)       |
++-----------------------+      REST    +-----------------------+
+           |                                  |
+           v                                  v
++-----------------------+          +-----------------------+
+|    postgres-tasks     |          |    postgres-users     |
+|     (Port 5432)       |          |     (Port 5433)       |
++-----------------------+          +-----------------------+
+```
 
 ### Tech Stack
 
 | Technology | Version | Role |
 |---|---|---|
-| Quarkus | 3.10.0 | Backend framework |
+| Quarkus | 3.24.1 | Backend framework |
 | Java | 17 | Language |
-| RESTEasy Reactive | — | REST layer (JAX-RS) |
+| Quarkus REST | — | REST layer (JAX-RS) |
+| MicroProfile REST Client | — | Inter-service communication |
 | Hibernate ORM + Panache | — | ORM / data access |
 | PostgreSQL | 16 | Database |
 | SmallRye OpenAPI | — | Swagger documentation |
 | JUnit 5 + Mockito | 5.x | Testing |
-| Docker | — | Containerization |
+| Docker & Compose | — | Containerization |
 
 ### Running locally
 
-#### Option 1 — Docker Compose (recommended)
+#### Full orchestration with Docker Compose (recommended)
+
+Spins up both microservices and their respective databases (4 containers):
 
 ```bash
 docker-compose up --build
 ```
 
-API available at `http://localhost:8080`
-Swagger UI at `http://localhost:8080/q/swagger-ui`
-
-#### Option 2 — Dev mode (requires local PostgreSQL)
-
-1. Start only the database:
-```bash
-docker-compose up postgres
-```
-
-2. Run in dev mode (hot reload enabled):
-```bash
-./mvnw quarkus:dev
-```
-
-#### Environment variables (production)
-
-| Variable | Description |
-|---|---|
-| `DB_URL` | PostgreSQL JDBC URL |
-| `DB_USERNAME` | PostgreSQL username |
-| `DB_PASSWORD` | PostgreSQL password |
+- **Task Service API:** `http://localhost:8080`
+- **User Service API:** `http://localhost:8081`
+- **Swagger UI (Tasks):** `http://localhost:8080/q/swagger-ui`
+- **Swagger UI (Users):** `http://localhost:8081/q/swagger-ui`
 
 ### API Endpoints
+
+#### Task Service (Port 8080)
 
 | Method | Path | Description | Success |
 |---|---|---|---|
@@ -173,10 +186,18 @@ docker-compose up postgres
 | `PUT` | `/tasks/{id}` | Update task | `200 OK` |
 | `DELETE` | `/tasks/{id}` | Delete task | `204 No Content` |
 
+#### User Service (Port 8081)
+
+| Method | Path | Description | Success |
+|---|---|---|---|
+| `GET` | `/users/health` | Service health check | `200 OK` |
+| `GET` | `/users/{id}` | Check if user exists | `200 OK` / `404 Not Found` |
+
 #### Request body (POST / PUT)
 
 ```json
 {
+  "userId": 1,
   "title": "string (required, max 255)",
   "description": "string (optional, max 2000)",
   "status": "PENDING | IN_PROGRESS | DONE"
@@ -188,6 +209,7 @@ docker-compose up postgres
 ```json
 {
   "id": 1,
+  "userId": 1,
   "title": "Setup CI/CD",
   "description": "Configure GitHub Actions pipeline",
   "status": "PENDING",
@@ -216,7 +238,7 @@ src/
 ./mvnw test
 ```
 
-9 unit tests for the service layer — no database required, pure Mockito.
+11 unit tests for the service layer — no database required, pure Mockito including REST Client mocking.
 
 ---
 

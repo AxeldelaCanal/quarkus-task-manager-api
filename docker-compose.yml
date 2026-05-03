@@ -1,10 +1,10 @@
-version: '3.8'
-
 services:
 
-  postgres:
+  # ─── Databases ───────────────────────────────────────────────────────────────
+
+  postgres-tasks:
     image: postgres:16-alpine
-    container_name: taskmanager-db
+    container_name: postgres-tasks
     environment:
       POSTGRES_DB: taskmanagerdb
       POSTGRES_USER: taskmanager
@@ -12,26 +12,69 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_tasks_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U taskmanager -d taskmanagerdb"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  app:
-    build: .
-    container_name: taskmanager-api
+  postgres-users:
+    image: postgres:16-alpine
+    container_name: postgres-users
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/taskmanagerdb
-      DB_USERNAME: taskmanager
-      DB_PASSWORD: taskmanager
+      POSTGRES_DB: usersdb
+      POSTGRES_USER: userservice
+      POSTGRES_PASSWORD: userservice
     ports:
-      - "8080:8080"
+      - "5433:5432"
+    volumes:
+      - postgres_users_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U userservice -d usersdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Microservices ───────────────────────────────────────────────────────────
+
+  user-service:
+    build:
+      # Context is the repo root so the Dockerfile can access the parent pom.xml
+      context: .
+      dockerfile: user-service/Dockerfile
+    container_name: user-service
+    environment:
+      DB_URL: jdbc:postgresql://postgres-users:5432/usersdb
+      DB_USERNAME: userservice
+      DB_PASSWORD: userservice
+    ports:
+      - "8081:8081"
     depends_on:
-      postgres:
+      postgres-users:
         condition: service_healthy
     restart: on-failure
 
+  task-service:
+    build:
+      # Context is the repo root so the Dockerfile can access the parent pom.xml
+      context: .
+      dockerfile: task-service/Dockerfile
+    container_name: task-service
+    environment:
+      DB_URL: jdbc:postgresql://postgres-tasks:5432/taskmanagerdb
+      DB_USERNAME: taskmanager
+      DB_PASSWORD: taskmanager
+      USER_SERVICE_URL: http://user-service:8081
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres-tasks:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    restart: on-failure
+
 volumes:
-  postgres_data:
+  postgres_tasks_data:
+  postgres_users_data:
