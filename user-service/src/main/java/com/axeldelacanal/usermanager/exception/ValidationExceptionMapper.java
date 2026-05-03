@@ -8,9 +8,6 @@ import jakarta.ws.rs.ext.Provider;
 
 import java.util.stream.Collectors;
 
-/**
- * Mapea fallos de Bean Validation a HTTP 400 con los mensajes unidos.
- */
 @Provider
 public class ValidationExceptionMapper implements ExceptionMapper<ConstraintViolationException> {
 
