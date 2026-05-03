@@ -1,0 +1,1 @@
+-- Datos de ejemplo opcionales en perfil dev (drop-and-create)
