@@ -1,33 +1,44 @@
 package com.axeldelacanal.usermanager.service;
 
+import com.axeldelacanal.usermanager.domain.User;
+import com.axeldelacanal.usermanager.dto.UserRequest;
+import com.axeldelacanal.usermanager.dto.UserResponse;
+import com.axeldelacanal.usermanager.exception.UserAlreadyExistsException;
 import com.axeldelacanal.usermanager.repository.UserRepository;
+import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
 
-/**
- * Lógica de negocio relacionada con usuarios.
- */
 @ApplicationScoped
 public class UserService {
 
     @Inject
     UserRepository userRepository;
 
-    /**
-     * Comprueba que la capa de servicio está operativa (usado por el health check HTTP).
-     */
     public boolean isHealthy() {
         return userRepository != null;
     }
 
-    /**
-     * Indica si existe un usuario con el ID dado.
-     * Usado por task-service para validar el propietario de una tarea antes de crearla.
-     *
-     * @param id identificador del usuario
-     * @return true si el usuario existe, false en caso contrario
-     */
     public boolean existsById(Long id) {
         return userRepository.findByIdOptional(id).isPresent();
+    }
+
+    @Transactional
+    public UserResponse create(UserRequest request) {
+        if (userRepository.findByUsername(request.username).isPresent()) {
+            throw new UserAlreadyExistsException("Username already taken: " + request.username);
+        }
+        if (userRepository.findByEmail(request.email).isPresent()) {
+            throw new UserAlreadyExistsException("Email already registered: " + request.email);
+        }
+
+        User user = new User();
+        user.setUsername(request.username);
+        user.setEmail(request.email);
+        user.setPassword(BcryptUtil.bcryptHash(request.password));
+
+        userRepository.persist(user);
+        return UserResponse.from(user);
     }
 }

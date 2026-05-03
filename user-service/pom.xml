@@ -50,6 +50,12 @@
       <artifactId>quarkus-smallrye-openapi</artifactId>
     </dependency>
 
+    <!-- BCrypt password hashing -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-elytron-security-common</artifactId>
+    </dependency>
+
     <!-- CDI -->
     <dependency>
       <groupId>io.quarkus</groupId>

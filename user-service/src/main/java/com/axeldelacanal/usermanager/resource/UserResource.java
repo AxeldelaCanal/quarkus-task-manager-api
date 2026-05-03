@@ -1,19 +1,23 @@
 package com.axeldelacanal.usermanager.resource;
 
 import com.axeldelacanal.usermanager.dto.HealthResponse;
+import com.axeldelacanal.usermanager.dto.UserRequest;
+import com.axeldelacanal.usermanager.dto.UserResponse;
 import com.axeldelacanal.usermanager.service.UserService;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriBuilder;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-/**
- * Endpoints REST del dominio de usuarios.
- */
 @Path("/users")
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+@Tag(name = "Users", description = "User management operations")
 public class UserResource {
 
     @Inject
@@ -30,11 +34,20 @@ public class UserResource {
         return Response.serverError().build();
     }
 
-    /**
-     * Verifica si existe un usuario con el ID dado.
-     * Devuelve 200 con el ID si existe, 404 si no.
-     * Consumido por task-service antes de crear una tarea.
-     */
+    @POST
+    @Operation(summary = "Create user", description = "Registers a new user with a BCrypt-hashed password")
+    @APIResponse(responseCode = "201", description = "User created")
+    @APIResponse(responseCode = "400", description = "Validation error")
+    @APIResponse(responseCode = "409", description = "Username or email already exists")
+    public Response create(@Valid UserRequest request) {
+        UserResponse created = userService.create(request);
+        return Response.created(UriBuilder.fromResource(UserResource.class)
+                        .path(String.valueOf(created.id))
+                        .build())
+                .entity(created)
+                .build();
+    }
+
     @GET
     @Path("/{id}")
     @Operation(summary = "Check user existence", description = "Returns 200 if the user exists, 404 otherwise")
