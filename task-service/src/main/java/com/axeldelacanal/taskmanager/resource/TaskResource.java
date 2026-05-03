@@ -6,6 +6,7 @@ import com.axeldelacanal.taskmanager.dto.PageResponse;
 import com.axeldelacanal.taskmanager.dto.TaskRequest;
 import com.axeldelacanal.taskmanager.dto.TaskResponse;
 import com.axeldelacanal.taskmanager.service.TaskService;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -13,22 +14,22 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.enums.SecuritySchemeType;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
+import org.eclipse.microprofile.openapi.annotations.security.SecurityScheme;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
-
-/**
- * JAX-RS resource exposing the Task Manager REST API.
- * Delegates all business logic to {@link TaskService}.
- */
 @ApplicationScoped
 @Path("/tasks")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @Tag(name = "Tasks", description = "Task lifecycle management")
+@SecurityScheme(securitySchemeName = "jwt", type = SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
+@SecurityRequirement(name = "jwt")
 public class TaskResource {
 
     @Inject
@@ -43,6 +44,7 @@ public class TaskResource {
     }
 
     @GET
+    @RolesAllowed("user")
     @Operation(summary = "List all tasks", description = "Returns a paginated list of tasks, optionally filtered by status")
     @APIResponse(responseCode = "200", description = "Paginated list of tasks",
             content = @Content(mediaType = MediaType.APPLICATION_JSON,
@@ -60,6 +62,7 @@ public class TaskResource {
 
     @GET
     @Path("/{id}")
+    @RolesAllowed("user")
     @Operation(summary = "Get task by ID")
     @APIResponse(responseCode = "200", description = "Task found")
     @APIResponse(responseCode = "404", description = "Task not found")
@@ -68,6 +71,7 @@ public class TaskResource {
     }
 
     @POST
+    @RolesAllowed("user")
     @Operation(summary = "Create a new task")
     @APIResponse(responseCode = "201", description = "Task created successfully")
     @APIResponse(responseCode = "400", description = "Validation error")
@@ -78,6 +82,7 @@ public class TaskResource {
 
     @PUT
     @Path("/{id}")
+    @RolesAllowed("user")
     @Operation(summary = "Update an existing task")
     @APIResponse(responseCode = "200", description = "Task updated successfully")
     @APIResponse(responseCode = "400", description = "Validation error")
@@ -88,6 +93,7 @@ public class TaskResource {
 
     @DELETE
     @Path("/{id}")
+    @RolesAllowed("user")
     @Operation(summary = "Delete a task")
     @APIResponse(responseCode = "204", description = "Task deleted successfully")
     @APIResponse(responseCode = "404", description = "Task not found")

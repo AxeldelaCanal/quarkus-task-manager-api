@@ -1,6 +1,8 @@
 package com.axeldelacanal.usermanager.resource;
 
 import com.axeldelacanal.usermanager.dto.HealthResponse;
+import com.axeldelacanal.usermanager.dto.LoginRequest;
+import com.axeldelacanal.usermanager.dto.LoginResponse;
 import com.axeldelacanal.usermanager.dto.UserRequest;
 import com.axeldelacanal.usermanager.dto.UserResponse;
 import com.axeldelacanal.usermanager.service.UserService;
@@ -46,6 +48,16 @@ public class UserResource {
                         .build())
                 .entity(created)
                 .build();
+    }
+
+    @POST
+    @Path("/login")
+    @Operation(summary = "Login", description = "Validates credentials and returns a signed JWT")
+    @APIResponse(responseCode = "200", description = "Login successful, JWT returned")
+    @APIResponse(responseCode = "401", description = "Invalid username or password")
+    public Response login(@Valid LoginRequest request) {
+        LoginResponse loginResponse = userService.login(request);
+        return Response.ok(loginResponse).build();
     }
 
     @GET

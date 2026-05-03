@@ -56,6 +56,12 @@
       <artifactId>quarkus-elytron-security-common</artifactId>
     </dependency>
 
+    <!-- JWT token generation -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-jwt-build</artifactId>
+    </dependency>
+
     <!-- CDI -->
     <dependency>
       <groupId>io.quarkus</groupId>
