@@ -5,12 +5,12 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
+import org.jboss.logging.Logger;
 
-/**
- * Mapper global: deja pasar excepciones JAX-RS y envuelve el resto en HTTP 500.
- */
 @Provider
 public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
+
+    private static final Logger LOG = Logger.getLogger(GlobalExceptionMapper.class);
 
     @Override
     public Response toResponse(Exception exception) {
@@ -18,6 +18,7 @@ public class GlobalExceptionMapper implements ExceptionMapper<Exception> {
             return wae.getResponse();
         }
 
+        LOG.errorf(exception, "Unhandled exception: %s", exception.getMessage());
         return Response
                 .status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(new ErrorResponse(500, "Internal Server Error", "An unexpected error occurred"))
