@@ -1,6 +1,7 @@
 package com.axeldelacanal.taskmanager.resource;
 
 import com.axeldelacanal.taskmanager.domain.TaskStatus;
+import com.axeldelacanal.taskmanager.dto.HealthResponse;
 import com.axeldelacanal.taskmanager.dto.TaskRequest;
 import com.axeldelacanal.taskmanager.dto.TaskResponse;
 import com.axeldelacanal.taskmanager.service.TaskService;
@@ -32,6 +33,14 @@ public class TaskResource {
 
     @Inject
     TaskService taskService;
+
+    @GET
+    @Path("/health")
+    @Operation(summary = "Health check", description = "Returns 200 when the task service is up")
+    @APIResponse(responseCode = "200", description = "Service healthy")
+    public Response health() {
+        return Response.ok(new HealthResponse("UP")).build();
+    }
 
     @GET
     @Operation(summary = "List all tasks", description = "Returns all tasks, optionally filtered by status")
